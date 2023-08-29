@@ -7,7 +7,6 @@ import os
 import re
 import random
 
-
 # Set number of threads to avoid a known issue with KMeans on Windows with MKL
 os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -38,7 +37,7 @@ def compute_keyword_similarity_scores(keyword, topics, pages, vectorizer):
     return highest_topic_similarity_score, highest_page_similarity_score, most_similar_topic, most_similar_page
 
 def main():
-    unique_pages = ['Home', 'About', 'Website Development', 'SEO Services', 'Blog', 'Contact']
+    unique_pages = ['Home', 'About', 'Website Development Services', 'SEO Services', 'Blog', 'Contact']
     primary_topic_search_queries = ['SEO Basics', 'Digital Marketing', 'Content Strategy', 'PPC Campaigns', 'Web Analytics', 'Customer Engagement', 'SEO Services']
     vectorizer = fit_vectorizer(unique_pages + primary_topic_search_queries)
 
@@ -51,7 +50,7 @@ def main():
         'inbound marketing', 'affiliate marketing', 'content management', 'influencer marketing',
         'sales funnel', 'search query', 'target audience', 'viral marketing', 'bounce rate',
         'domain authority', 'meta description', 'page speed', 'ROI', 'social proof',
-        'call to action', 'CMS', 'CRM', 'customer segmentation', 'KPI', 'link building',
+        'call to action', 'CMS', 'CRM', 'customer segmentation', 'website development', 'link building',
         'online reputation', 'SEO audit', 'user interface', 'data-driven marketing', 'seo basics',
     ]
 
@@ -66,23 +65,20 @@ def main():
             'page_similarity_score': highest_page_similarity_score,
             'primary_topic': most_similar_topic
         })
-    
+
     plot_data(data, unique_pages, primary_topic_search_queries)
 
 def plot_data(data, unique_pages, primary_topic_search_queries):
     keywords = [d['keyword'] for d in data]
     pages = [d['page'] for d in data]
-    topic_similarity_scores = [d['topic_similarity_score'] for d in data]
-    page_similarity_scores = [d['page_similarity_score'] for d in data]
-
+    topic_similarity_scores = [d['topic_similarity_score'] for d in data]  # Added this line
     pages_idx = [unique_pages.index(page) for page in pages]
-    primary_topics_idx = [primary_topic_search_queries.index(d['primary_topic']) for d in data]  # Fixed this line
-    
+    primary_topics_idx = [primary_topic_search_queries.index(d['primary_topic']) for d in data]
+
     # Adding jitter: random noise to separate overlapping points
     jitter = 0.2
     pages_idx = [x + random.uniform(-jitter, jitter) for x in pages_idx]
-    topic_similarity_scores = [x + random.uniform(-jitter, jitter) for x in topic_similarity_scores]
-    
+    topic_similarity_scores = [x + random.uniform(-jitter, jitter) for x in topic_similarity_scores]    
     
     # 3D Plot
     fig = plt.figure(figsize=(30, 20))
@@ -95,7 +91,11 @@ def plot_data(data, unique_pages, primary_topic_search_queries):
     ax.set_xlabel('Pages')
     ax.set_ylabel('Primary Topics')
     ax.set_zlabel('Topic Similarity Scores')
-
+    ax.set_xticks(range(len(unique_pages)))
+    ax.set_xticklabels(unique_pages, fontsize=10, rotation=45)
+    ax.set_yticks(range(len(primary_topic_search_queries)))
+    ax.set_yticklabels(primary_topic_search_queries, fontsize=10, rotation=45)
+    
     plt.colorbar(sc)
     plt.show()
 
@@ -108,6 +108,8 @@ def plot_data(data, unique_pages, primary_topic_search_queries):
 
     plt.xlabel('Pages')
     plt.ylabel('Primary Topics')
+    plt.xticks(range(len(unique_pages)), unique_pages, rotation=45)
+    plt.yticks(range(len(primary_topic_search_queries)), primary_topic_search_queries, rotation=45)
     plt.colorbar(scatter)
     plt.show()
 
