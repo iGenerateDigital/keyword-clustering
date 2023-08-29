@@ -1,0 +1,135 @@
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+import numpy as np
+import nltk
+import os
+import re
+
+
+# Set number of threads to avoid a known issue with KMeans on Windows with MKL
+os.environ['OMP_NUM_THREADS'] = '1'
+
+def preprocess_text(text):
+    """Lowercase and stem the text."""
+    stemmer = PorterStemmer()
+    text = text.lower()
+    text = re.sub(r'\W', ' ', text)
+    words = text.split()
+    words = [stemmer.stem(word) for word in words]
+    return ' '.join(words)
+
+def fit_vectorizer(corpus):
+    """Fit a TF-IDF Vectorizer to the corpus."""
+    stop_words = set(stopwords.words('english'))
+    return TfidfVectorizer(stop_words=list(stop_words), ngram_range=(1, 2)).fit(corpus)
+
+def calculate_similarity(vectorizer, phrase1, phrase2):
+    """Calculate similarity score between two phrases."""
+    phrase1, phrase2 = preprocess_text(phrase1), preprocess_text(phrase2)
+    vectors = vectorizer.transform([phrase1, phrase2]).toarray()
+    return cosine_similarity(vectors)[0, 1]
+
+
+def compute_keyword_similarity_scores(keyword, topics, pages, vectorizer):
+    """Compute similarity scores for a keyword against topics and pages."""
+    topic_scores = {topic: calculate_similarity(vectorizer, keyword, topic) for topic in topics}
+    page_scores = {page: calculate_similarity(vectorizer, keyword, page) for page in pages}
+    
+    most_similar_topic = max(topic_scores, key=topic_scores.get)
+    most_similar_page = max(page_scores, key=page_scores.get)
+    
+    highest_topic_similarity_score = topic_scores[most_similar_topic]
+    highest_page_similarity_score = page_scores[most_similar_page]
+    
+    return highest_topic_similarity_score, highest_page_similarity_score, most_similar_topic, most_similar_page
+
+def main():
+    unique_pages = ['Home', 'About', 'Website Development', 'SEO Services', 'Blog', 'Contact']
+    primary_topic_search_queries = ['SEO Basics', 'Digital Marketing', 'Content Strategy', 'PPC Campaigns', 'Web Analytics', 'Customer Engagement', 'SEO Services',]
+    
+    vectorizer = fit_vectorizer(unique_pages + primary_topic_search_queries)
+    
+    manually_inputted_keywords = [
+        'SEO', 'marketing', 'analytics', 'web design', 'content', 'engagement',
+        'social media', 'PPC', 'email marketing', 'branding', 'conversion rate',
+        'customer journey', 'user experience', 'backlinks', 'SERP', 'digital advertising',
+        'keyword research', 'landing page', 'organic traffic', 'remarketing', 'A/B testing',
+        'click-through rate', 'copywriting', 'lead generation', 'mobile optimization',
+        'inbound marketing', 'affiliate marketing', 'content management', 'influencer marketing',
+        'sales funnel', 'search query', 'target audience', 'viral marketing', 'bounce rate',
+        'domain authority', 'meta description', 'page speed', 'ROI', 'social proof',
+        'call to action', 'CMS', 'CRM', 'customer segmentation', 'KPI', 'link building',
+        'online reputation', 'SEO audit', 'user interface', 'data-driven marketing', 'seo basics',
+    ]
+    
+    data = []
+    for keyword in manually_inputted_keywords:
+        highest_topic_similarity_score, highest_page_similarity_score, most_similar_topic, most_similar_page = compute_keyword_similarity_scores(
+            keyword, primary_topic_search_queries, unique_pages, vectorizer)
+
+        print(f"Keyword: {keyword}")
+        print(f"  - Most similar page: {most_similar_page} (Similarity Score: {highest_page_similarity_score})")
+        print(f"  - Most similar topic: {most_similar_topic} (Similarity Score: {highest_topic_similarity_score})")
+        print("-" * 50)        
+
+        data.append({
+            'keyword': keyword,
+            'page': most_similar_page,
+            'topic_similarity_score': highest_topic_similarity_score,
+            'page_similarity_score': highest_page_similarity_score,
+            'primary_topic': most_similar_topic
+        })
+        
+    plot_data(data, unique_pages, primary_topic_search_queries)
+
+def plot_data(data, unique_pages, primary_topic_search_queries):
+    """Plotting the 3D scatter plot."""
+    keywords = [d['keyword'] for d in data]
+    pages = [d['page'] for d in data]
+    topic_similarity_scores = [d['topic_similarity_score'] for d in data]
+    page_similarity_scores = [d['page_similarity_score'] for d in data]
+    
+    pages_idx = [unique_pages.index(page) for page in pages]
+    primary_topics_idx = [primary_topic_search_queries.index(topic) for topic in primary_topics]
+
+    fig = plt.figure(figsize=(30, 20))
+    ax = fig.add_subplot(111, projection='3d')
+    sc = ax.scatter(pages_idx, primary_topics_idx, topic_similarity_scores, c=topic_similarity_scores, cmap='viridis')
+
+    for i, keyword in enumerate(keywords):
+        ax.text(pages_idx[i], primary_topics_idx[i], topic_similarity_scores[i], keyword)
+
+    ax.set_xlabel('Pages', fontsize=12)
+    ax.set_ylabel('Primary Topic Search Queries', fontsize=12)
+    ax.set_zlabel('Topic Similarity Scores', fontsize=12)
+    ax.set_xticks(range(len(unique_pages)))
+    ax.set_xticklabels(unique_pages, fontsize=10)
+    ax.set_yticks(range(len(primary_topic_search_queries)))
+    ax.set_yticklabels(primary_topic_search_queries, fontsize=10, rotation=90)
+
+    plt.colorbar(sc)
+    plt.show()
+    
+    # 2D Plot
+    plt.figure(figsize=(10, 10))
+    scatter = plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='viridis')
+    
+    # Annotate each point with the corresponding keyword
+    for i, keyword in enumerate(manually_inputted_keywords):
+        plt.annotate(keyword, (X[i, 0], X[i, 1]))
+    
+    # Show axis labels
+    plt.xlabel('Topic Similarity Scores')
+    plt.ylabel('Page Similarity Scores')
+    
+    # Show color bar
+    plt.colorbar(scatter)
+    
+    plt.show()
+
+if __name__ == "__main__":
+    main()
